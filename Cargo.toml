@@ -1,5 +1,5 @@
 [package]
-name = "nn"
+name = "neural-network-study"
 version = "0.1.0"
 edition = "2024"
 
