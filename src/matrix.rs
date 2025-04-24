@@ -1,5 +1,5 @@
 use rand::Rng;
-
+use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 /// A simple 2-dimensional matrix with basic operations
 pub struct Matrix {
@@ -91,6 +91,95 @@ impl Matrix {
             panic!("Index out of bounds");
         }
         self.data[row][col] = value;
+    }
+
+    /// Returns the matrix resulting from 
+    /// applying the function `f` to each element of the matrix.
+    pub fn map<F>(&self, f: F) -> Matrix
+    where
+        F: Fn(f64) -> f64,
+    {
+        let mut result = Matrix::new(self.rows, self.cols);
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                result.set(i, j, f(self.get(i, j)));
+            }
+        }
+        result
+    }
+
+    /// Applies the function `f` to each element of the matrix in place.
+    /// This is an in-place operation.
+    pub fn map_mut<F>(&mut self, f: F)
+    where
+        F: Fn(f64) -> f64,
+    {
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                self.set(i, j, f(self.get(i, j)));
+            }
+        }
+    }
+}
+
+impl Add<&Matrix> for Matrix {
+    type Output = Matrix;
+
+    /// Adds two matrices together, component-wise.
+    /// Panics if the matrices have different dimensions.
+    fn add(self, other: &Matrix) -> Matrix {
+        if self.rows != other.rows || self.cols != other.cols {
+            panic!("Matrices must have the same dimensions to be added");
+        }
+        let mut result = Matrix::new(self.rows, self.cols);
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                result.set(i, j, self.get(i, j) + other.get(i, j));
+            }
+        }
+        result
+    }
+}
+
+impl AddAssign<&Matrix> for Matrix {
+    /// Adds another matrix to this matrix, component-wise.
+    /// Panics if the matrices have different dimensions.
+    /// This is an in-place operation.
+    fn add_assign(&mut self, other: &Matrix) {
+        if self.rows != other.rows || self.cols != other.cols {
+            panic!("Matrices must have the same dimensions to be added");
+        }
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                self.set(i, j, self.get(i, j) + other.get(i, j));
+            }
+        }
+    }
+}
+
+impl Mul<f64> for Matrix {
+    type Output = Matrix;
+
+    /// Multiplies the matrix by a scalar.
+    fn mul(self, scalar: f64) -> Matrix {
+        let mut result = Matrix::new(self.rows, self.cols);
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                result.set(i, j, self.get(i, j) * scalar);
+            }
+        }
+        result
+    }
+}
+
+impl MulAssign<f64> for Matrix {
+    /// Multiplies the matrix by a scalar in-place.
+    fn mul_assign(&mut self, scalar: f64) {
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                self.set(i, j, self.get(i, j) * scalar);
+            }
+        }
     }
 }
 
@@ -211,5 +300,67 @@ mod tests {
         assert_eq!(m.get(1, 2), 2.0);
         assert_eq!(m.get(0, 1), 0.0);
         assert_eq!(m.get(1, 0), 0.0);
+    }
+
+    #[test]
+    fn it_adds_matrices() {
+        let m1 = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        let m2 = Matrix::from_vec(vec![vec![5.0, 6.0], vec![7.0, 8.0]]);
+        let result = m1 + &m2;
+        assert_eq!(result.get(0, 0), 6.0);
+        assert_eq!(result.get(0, 1), 8.0);
+        assert_eq!(result.get(1, 0), 10.0);
+        assert_eq!(result.get(1, 1), 12.0);
+    }
+
+    #[test]
+    fn it_adds_and_assigns() {
+        let mut m1 = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        let m2 = Matrix::from_vec(vec![vec![5.0, 6.0], vec![7.0, 8.0]]);
+        m1 += &m2;
+        assert_eq!(m1.get(0, 0), 6.0);
+        assert_eq!(m1.get(0, 1), 8.0);
+        assert_eq!(m1.get(1, 0), 10.0);
+        assert_eq!(m1.get(1, 1), 12.0);
+    }
+
+    #[test]
+    fn it_multiplies_by_scalar() {
+        let m = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        let result = m * 2.0;
+        assert_eq!(result.get(0, 0), 2.0);
+        assert_eq!(result.get(0, 1), 4.0);
+        assert_eq!(result.get(1, 0), 6.0);
+        assert_eq!(result.get(1, 1), 8.0);
+    }
+
+    #[test]
+    fn it_multiplies_by_scalar_in_place() {
+        let mut m = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        m *= 2.0;
+        assert_eq!(m.get(0, 0), 2.0);
+        assert_eq!(m.get(0, 1), 4.0);
+        assert_eq!(m.get(1, 0), 6.0);
+        assert_eq!(m.get(1, 1), 8.0);
+    }
+
+    #[test]
+    fn it_maps() {
+        let m = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        let result = m.map(|x| x * 2.0);
+        assert_eq!(result.get(0, 0), 2.0);
+        assert_eq!(result.get(0, 1), 4.0);
+        assert_eq!(result.get(1, 0), 6.0);
+        assert_eq!(result.get(1, 1), 8.0);
+    }
+
+    #[test]
+    fn it_maps_mut() {
+        let mut m = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        m.map_mut(|x| x * 2.0);
+        assert_eq!(m.get(0, 0), 2.0);
+        assert_eq!(m.get(0, 1), 4.0);
+        assert_eq!(m.get(1, 0), 6.0);
+        assert_eq!(m.get(1, 1), 8.0);
     }
 }
