@@ -143,6 +143,17 @@ impl Matrix {
         }
     }
 
+    pub fn hadamar_product(&mut self, other: &Matrix) {
+        if self.rows != other.rows || self.cols != other.cols {
+            panic!("Matrices must have the same dimensions for Hadamard product");
+        }
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                self.set(i, j, self.get(i, j) * other.get(i, j));
+            }
+        }
+    }
+
     /// Returns the matrix resulting from applying the sigmoid function
     /// to each element of the matrix.
     /// The sigmoid function is defined as `1 / (1 + exp(-x))`.
@@ -263,27 +274,6 @@ impl Mul<&Matrix> for &Matrix {
             }
         }
         result
-    }
-}
-
-impl MulAssign<&Matrix> for Matrix {
-    /// Multiplies this matrix by another matrix in-place.
-    /// Panics if the matrices have incompatible dimensions.
-    fn mul_assign(&mut self, other: &Matrix) {
-        if self.cols != other.rows {
-            panic!("Matrices have incompatible dimensions for multiplication");
-        }
-        let mut result = Matrix::new(self.rows, other.cols);
-        for i in 0..self.rows {
-            for j in 0..other.cols {
-                let mut sum = 0.0;
-                for k in 0..self.cols {
-                    sum += self.get(i, k) * other.get(k, j);
-                }
-                result.set(i, j, sum);
-            }
-        }
-        *self = result;
     }
 }
 

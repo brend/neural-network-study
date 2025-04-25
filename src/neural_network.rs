@@ -1,8 +1,6 @@
-use rand::rand_core::le;
-
 use crate::matrix::Matrix;
 
-struct NeuralNetwork {
+pub struct NeuralNetwork {
     input_size: usize,
     hidden_size: usize,
     output_size: usize,
@@ -69,7 +67,7 @@ impl NeuralNetwork {
 
         // Calculate gradients
         let mut gradients = output_layer_output.sigmoid_derivative();
-        gradients *= &output_errors;
+        gradients.hadamar_product(&output_errors);
         gradients *= self.learning_rate;
 
         // Calculcate deltas
@@ -87,7 +85,7 @@ impl NeuralNetwork {
 
         // Calculate hidden gradients
         let mut hidden_gradient = hidden_layer_output.sigmoid_derivative();
-        hidden_gradient *= &hidden_errors;
+        hidden_gradient.hadamar_product(&hidden_errors);
         hidden_gradient *= self.learning_rate;
 
         // Calculate input -> hidden deltas
