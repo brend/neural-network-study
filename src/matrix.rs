@@ -26,12 +26,25 @@ impl Matrix {
         Self { rows, cols, data }
     }
 
-    /// Creates a new matrix from a vector of vectors.
-    /// The outer vector represents the rows,
-    /// and the inner vectors represent the columns.
+    /// Creates a new matrix from a 2D vector.
+    /// The outer vector represents the rows, and the inner vectors represent the columns.
+    /// Panics if the inner vectors have different lengths.
     pub fn from_vec(data: Vec<Vec<f64>>) -> Self {
         let rows = data.len();
         let cols = if rows > 0 { data[0].len() } else { 0 };
+        for row in &data {
+            if row.len() != cols {
+                panic!("All rows must have the same number of columns");
+            }
+        }
+        Self { rows, cols, data }
+    }
+
+    /// Creates a new matrix from a column vector.
+    pub fn from_col_vec(data: Vec<f64>) -> Self {
+        let rows = data.len();
+        let cols = 1;
+        let data = data.into_iter().map(|x| vec![x]).collect();
         Self { rows, cols, data }
     }
 
@@ -54,6 +67,15 @@ impl Matrix {
     /// Returns the number of columns in the matrix.
     pub fn cols(&self) -> usize {
         self.cols
+    }
+
+    /// Returns the column at the given index as a vector.
+    /// Panics if the index is out of bounds.
+    pub fn col(&self, index: usize) -> Vec<f64> {
+        if index >= self.cols {
+            panic!("Index out of bounds");
+        }
+        (0..self.rows).map(|i| self.data[i][index]).collect()
     }
 
     /// Returns a reference to the data in the matrix.
@@ -120,6 +142,25 @@ impl Matrix {
             }
         }
     }
+
+    /// Returns the matrix resulting from applying the sigmoid function
+    /// to each element of the matrix.
+    /// The sigmoid function is defined as `1 / (1 + exp(-x))`.
+    /// This is a common activation function used in neural networks.
+    /// It maps the input values to a range between 0 and 1.
+    pub fn sigmoid(&self) -> Matrix {
+        self.map(|x| 1.0 / (1.0 + (-x).exp()))
+    }
+
+    /// Returns the matrix resulting from applying the derivative of the sigmoid function
+    /// to each element of the matrix.
+    /// The derivative of the sigmoid function is defined as `sigmoid(x) * (1 - sigmoid(x))`.
+    /// This is useful for backpropagation in neural networks.
+    /// It computes the gradient of the sigmoid function,
+    /// which is used to update the weights during training.
+    pub fn sigmoid_derivative(&self) -> Matrix {
+        self.map(|x| x * (1.0 - x))
+    }
 }
 
 impl Add<&Matrix> for Matrix {
@@ -180,6 +221,29 @@ impl MulAssign<f64> for Matrix {
                 self.set(i, j, self.get(i, j) * scalar);
             }
         }
+    }
+}
+
+impl Mul<&Matrix> for &Matrix {
+    type Output = Matrix;
+
+    /// Multiplies two matrices together.
+    /// Panics if the matrices have incompatible dimensions.
+    fn mul(self, other: &Matrix) -> Matrix {
+        if self.cols != other.rows {
+            panic!("Matrices have incompatible dimensions for multiplication");
+        }
+        let mut result = Matrix::new(self.rows, other.cols);
+        for i in 0..self.rows {
+            for j in 0..other.cols {
+                let mut sum = 0.0;
+                for k in 0..self.cols {
+                    sum += self.get(i, k) * other.get(k, j);
+                }
+                result.set(i, j, sum);
+            }
+        }
+        result
     }
 }
 
