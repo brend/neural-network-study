@@ -6,11 +6,31 @@ const BASKET_HEIGHT: f32 = 20.0;
 const APPLE_RADIUS: f32 = 10.0;
 const APPLE_SPEED: f32 = 5.0;
 
+#[derive(PartialEq)]
+enum FruitType {
+    Apple,
+    Banana,
+}
+
+impl FruitType {
+    fn value(&self) -> f64 {
+        match self {
+            FruitType::Apple => 1.0,
+            FruitType::Banana => -1.0,
+        }
+    }
+}
+
 pub async fn run() {
     let mut basket_x = screen_width() / 2.0;
     let basket_y = screen_height() - 50.0;
-    let mut apple_x = rand::gen_range(0.0, screen_width() - APPLE_RADIUS * 2.0);
-    let mut apple_y = 0.0;
+    let mut fruit_x = rand::gen_range(0.0, screen_width() - APPLE_RADIUS * 2.0);
+    let mut fruit_y = 0.0;
+    let mut fruit_type = if rand::gen_range(0.0, 1.0) < 0.8 {
+        FruitType::Apple
+    } else {
+        FruitType::Banana
+    };
     let mut score = 0;
     let mut apple_count = 0;
 
@@ -23,27 +43,45 @@ pub async fn run() {
         // Draw basket
         draw_rectangle(basket_x, basket_y, BASKET_WIDTH, BASKET_HEIGHT, DARKGRAY);
 
-        // Draw apple
-        draw_circle(apple_x + APPLE_RADIUS, apple_y + APPLE_RADIUS, APPLE_RADIUS, RED);
+        // Draw fruit
+        let fruit_color = match fruit_type {
+            FruitType::Apple => RED,
+            FruitType::Banana => YELLOW,
+        };
+        draw_circle(fruit_x + APPLE_RADIUS, fruit_y + APPLE_RADIUS - 2.0, APPLE_RADIUS, DARKGRAY);
+        draw_circle(fruit_x + APPLE_RADIUS, fruit_y + APPLE_RADIUS, APPLE_RADIUS, fruit_color);
 
-        // Update apple position
-        apple_y += APPLE_SPEED;
+        // Update fruit position
+        fruit_y += APPLE_SPEED;
 
         // Check for collision with basket
-        if apple_y + APPLE_RADIUS * 2.0 >= basket_y
-            && apple_x + APPLE_RADIUS * 2.0 >= basket_x
-            && apple_x <= basket_x + BASKET_WIDTH
+        if fruit_y + APPLE_RADIUS * 2.0 >= basket_y
+            && fruit_x + APPLE_RADIUS * 2.0 >= basket_x
+            && fruit_x <= basket_x + BASKET_WIDTH
         {
-            score += 1;
-            apple_x = rand::gen_range(0.0, screen_width() - APPLE_RADIUS * 2.0);
-            apple_y = 0.0;
+            match fruit_type {
+                FruitType::Apple => score += 1,
+                FruitType::Banana => score -= 1,
+            }
+            fruit_x = rand::gen_range(0.0, screen_width() - APPLE_RADIUS * 2.0);
+            fruit_y = 0.0;
+            fruit_type = if rand::gen_range(0.0, 1.0) < 0.8 {
+                FruitType::Apple
+            } else {
+                FruitType::Banana
+            };
             apple_count += 1;
         }
 
-        // Reset apple if it falls off screen
-        if apple_y > screen_height() {
-            apple_x = rand::gen_range(0.0, screen_width() - APPLE_RADIUS * 2.0);
-            apple_y = 0.0;
+        // Reset fruit if it falls off screen
+        if fruit_y > screen_height() {
+            fruit_x = rand::gen_range(0.0, screen_width() - APPLE_RADIUS * 2.0);
+            fruit_y = 0.0;
+            fruit_type = if rand::gen_range(0.0, 1.0) < 0.8 {
+                FruitType::Apple
+            } else {
+                FruitType::Banana
+            };
             apple_count += 1;
         }
 
@@ -56,19 +94,25 @@ pub async fn run() {
         // }
 
         // Allow the neural network to control the basket
-        let apple_pos = (apple_x + APPLE_RADIUS) / screen_width();
+        let fruit_pos = (fruit_x + APPLE_RADIUS) / screen_width();
         let basket_pos = (basket_x + BASKET_WIDTH / 2.0) / screen_width();
-        let input = vec![apple_pos as f64, basket_pos as f64];
+        let input = vec![fruit_pos as f64, fruit_type.value(), basket_pos as f64];
         let output = nn.predict(input);
-        let move_left = output[0] > 0.5;
-        let move_right = output[1] > 0.5;
+        // let move_left = output[0] > 0.5;
+        // let move_right = output[1] > 0.5;
+        // if move_left {
+        //     basket_x -= 10.0;
+        // }
+        // if move_right {
+        //     basket_x += 10.0;
+        // }
+        let move_left = output[0] > output[1];
         if move_left {
             basket_x -= 10.0;
-        }
-        if move_right {
+        } else {
             basket_x += 10.0;
         }
-
+        
         // Clamp basket position to screen bounds
         basket_x = basket_x.clamp(0.0, screen_width() - BASKET_WIDTH);
 
@@ -86,20 +130,32 @@ pub async fn run() {
 }
 
 fn train_a_neural_network_to_catch_apples_in_a_basket() -> NeuralNetwork {
-    // Create a neural network with 2 inputs (apple position and basket position), 3 hidden neurons, and 1 output (basket position)
-    let mut nn = NeuralNetwork::new(2, 3, 2);
+    // Create a neural network with 3 inputs (fruit position, fruit type, and basket position),
+    // 4 hidden neurons, and 2 outputs (move left and move right)
+    let mut nn = NeuralNetwork::new(3, 4, 2);
     nn.set_learning_rate(0.1);
 
     // Train the neural network with random data
     let iterations = 10000;
     for _ in 0..iterations {
-        let apple_x = rand::gen_range(0.0, screen_width());
+        let fruit_x = rand::gen_range(0.0, screen_width());
         let basket_x = rand::gen_range(0.0, screen_width());
-        // Inputs: apple position and basket position
-        let input = vec![apple_x as f64 / screen_width() as f64, basket_x as f64 / screen_width() as f64];
+        // Inputs: fruit position, fruit type, and basket position
+        let (_, fruit_type_value) = if rand::gen_range(0.0, 1.0) < 0.8 {
+            (FruitType::Apple, 1.0)
+        } else {
+            (FruitType::Banana, -1.0)
+        };
+        let input = vec![fruit_x as f64 / screen_width() as f64, fruit_type_value, basket_x as f64 / screen_width() as f64];
         // Target: vector of [move_left, move_right]
-        let dx = apple_x - basket_x;        
-        let target = vec![-dx.signum() as f64, dx.signum() as f64];
+        let dx = fruit_x - basket_x;        
+        let target = if fruit_type_value > 0.0 {
+            // It's an apple: move toward it
+            vec![-dx.signum() as f64, dx.signum() as f64]
+        } else {
+            // It's a banana: move away from it
+            vec![dx.signum() as f64, -dx.signum() as f64]
+        };
         nn.train(input, target);
     }
 
