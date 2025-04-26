@@ -2,6 +2,7 @@ use rand::Rng;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub};
 
 /// A simple 2-dimensional matrix with basic operations
+#[derive(Clone, Debug)]
 pub struct Matrix {
     rows: usize,
     cols: usize,
@@ -152,25 +153,6 @@ impl Matrix {
                 self.set(i, j, self.get(i, j) * other.get(i, j));
             }
         }
-    }
-
-    /// Returns the matrix resulting from applying the sigmoid function
-    /// to each element of the matrix.
-    /// The sigmoid function is defined as `1 / (1 + exp(-x))`.
-    /// This is a common activation function used in neural networks.
-    /// It maps the input values to a range between 0 and 1.
-    pub fn sigmoid(&self) -> Matrix {
-        self.map(|x| 1.0 / (1.0 + (-x).exp()))
-    }
-
-    /// Returns the matrix resulting from applying the derivative of the sigmoid function
-    /// to each element of the matrix.
-    /// The derivative of the sigmoid function is defined as `sigmoid(x) * (1 - sigmoid(x))`.
-    /// This is useful for backpropagation in neural networks.
-    /// It computes the gradient of the sigmoid function,
-    /// which is used to update the weights during training.
-    pub fn sigmoid_derivative(&self) -> Matrix {
-        self.map(|x| x * (1.0 - x))
     }
 }
 

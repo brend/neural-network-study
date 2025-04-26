@@ -1,7 +1,8 @@
 mod matrix;
 mod neural_network;
 mod tictactoe;
+mod simple;
 
 fn main() {
-    tictactoe::run();
+    simple::run_xor();
 }
