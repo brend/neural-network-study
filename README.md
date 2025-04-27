@@ -15,6 +15,14 @@ The first step is creating a perceptron, a single "neuron" that can be used to s
   <figcaption>The perceptron identifies if points are above or below the line</figcaption>
 </figure>
 
+### Stage 2: Multilayer Perceptron - The Neural Network
+
+Once the principle of the perceptron is understood, the next major step in developing a neural network is to create a *multilayer perceptron*, that is, a small network with inputs, a hidden layer, and outputs.
+
+This evolution of the concept can solve a variety of problems. A classic example is a game of moving a basket to catch falling apples -- and in this enhanced version, avoid the sour lemons!
+
+<img src="assets/catch-the-apples.gif" alt="Animation showing a basket moving left and right to catch falling apples">
+
 ## About This Project
 
 ![Made with Rust](https://img.shields.io/badge/Made%20with-Rust-orange)
