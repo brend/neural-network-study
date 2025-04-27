@@ -98,20 +98,20 @@ pub async fn run() {
         let basket_pos = (basket_x + BASKET_WIDTH / 2.0) / screen_width();
         let input = vec![fruit_pos as f64, fruit_type.value(), basket_pos as f64];
         let output = nn.predict(input);
-        // let move_left = output[0] > 0.5;
-        // let move_right = output[1] > 0.5;
-        // if move_left {
-        //     basket_x -= 10.0;
-        // }
-        // if move_right {
-        //     basket_x += 10.0;
-        // }
-        let move_left = output[0] > output[1];
+        let move_left = output[0] > 0.5;
+        let move_right = output[1] > 0.5;
         if move_left {
             basket_x -= 10.0;
-        } else {
+        }
+        if move_right {
             basket_x += 10.0;
         }
+        // let move_left = output[0] > output[1];
+        // if move_left {
+        //     basket_x -= 10.0;
+        // } else {
+        //     basket_x += 10.0;
+        // }
         
         // Clamp basket position to screen bounds
         basket_x = basket_x.clamp(0.0, screen_width() - BASKET_WIDTH);
@@ -136,12 +136,12 @@ fn train_a_neural_network_to_catch_apples_in_a_basket() -> NeuralNetwork {
     nn.set_learning_rate(0.1);
 
     // Train the neural network with random data
-    let iterations = 10000;
+    let iterations = 100000;
     for _ in 0..iterations {
         let fruit_x = rand::gen_range(0.0, screen_width());
         let basket_x = rand::gen_range(0.0, screen_width());
         // Inputs: fruit position, fruit type, and basket position
-        let (_, fruit_type_value) = if rand::gen_range(0.0, 1.0) < 0.8 {
+        let (_, fruit_type_value) = if rand::gen_range(0.0, 1.0) < 0.5 {
             (FruitType::Apple, 1.0)
         } else {
             (FruitType::Banana, -1.0)
