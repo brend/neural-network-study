@@ -1,6 +1,6 @@
 # Neural Network Study
 
-An implementation of a toy [neural network](https://en.wikipedia.org/wiki/Neural_network_(machine_learning)) from scratch. The idea is to learn about the workings of neural networks and the underlying math, but also to produce something useful.
+An implementation of a toy [neural network](https://en.wikipedia.org/wiki/Neural_network_(machine_learning)) from scratch. The idea is to learn about the workings of neural networks and the underlying math, but also to produce something useful and, most of all, fun.
 
 This project follows a series on neural networks on [The Coding Train](https://youtu.be/ntKn5TPHHAk?si=0DsBd9O9Rp-bqC-H).
 
