@@ -586,6 +586,34 @@ impl NeuralNetwork {
         // Adjust the bias by its deltas (which is just the gradient)
         self.biases_hidden += &hidden_gradient;
     }
+
+    pub fn mutate(&mut self, mutation_rate: f64) {
+        let mut rng = rand::rng();
+        for i in 0..self.weights_input_hidden.rows() {
+            for j in 0..self.weights_input_hidden.cols() {
+                if rng.random::<f64>() < mutation_rate {
+                    self.weights_input_hidden.set(i, j, rng.random_range(-1.0..1.0));
+                }
+            }
+        }
+        for i in 0..self.weights_hidden_output.rows() {
+            for j in 0..self.weights_hidden_output.cols() {
+                if rng.random::<f64>() < mutation_rate {
+                    self.weights_hidden_output.set(i, j, rng.random_range(-1.0..1.0));
+                }
+            }
+        }
+        for i in 0..self.biases_hidden.rows() {
+            if rng.random::<f64>() < mutation_rate {
+                self.biases_hidden.set(i, 0, rng.random_range(-1.0..1.0));
+            }
+        }
+        for i in 0..self.biases_output.rows() {
+            if rng.random::<f64>() < mutation_rate {
+                self.biases_output.set(i, 0, rng.random_range(-1.0..1.0));
+            }
+        }
+    }
 }
 
 pub mod nn_tests {
