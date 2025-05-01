@@ -1,6 +1,6 @@
 [package]
 name = "neural-network-study"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors = ["Philipp Brendel <waldrumpus@gmail.com>"]
 description = "A toy neural network library for educational purposes"
