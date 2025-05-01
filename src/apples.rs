@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use crate::neural_network::NeuralNetwork;
+use neural_network_study::NeuralNetwork;
 
 const BASKET_WIDTH: f32 = 100.0;
 const BASKET_HEIGHT: f32 = 20.0;
