@@ -2,6 +2,12 @@
 name = "neural-network-study"
 version = "0.1.0"
 edition = "2024"
+authors = ["Philipp Brendel <waldrumpus@gmail.com>"]
+description = "A toy neural network library for educational purposes"
+license = "MIT"
+repository = "https://github.com/brend/neural-network-study"
+readme = "README.md"
+keywords = ["computer science", "neural network"]
 
 [dependencies]
 macroquad = "0.4.14"
