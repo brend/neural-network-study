@@ -225,10 +225,11 @@ checksum = "e1bcdd74c20ad5d95aacd60ef9ba40fdf77f767051040541df557b7a9b2a2121"
 
 [[package]]
 name = "neural-network-study"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "macroquad",
  "rand",
+ "serde",
  "serde_json",
 ]
 

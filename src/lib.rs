@@ -1,8 +1,9 @@
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub};
 
 /// A simple 2-dimensional matrix with basic operations
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Matrix {
     rows: usize,
     cols: usize,
@@ -465,16 +466,46 @@ fn linear_derivative(x: &Matrix) -> Matrix {
     x.map(|_| 1.0)
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+enum ActivationFunction {
+    Sigmoid,
+    Tanh,
+    Linear,
+}
+
+impl Default for ActivationFunction {
+    fn default() -> Self {
+        ActivationFunction::Sigmoid
+    }
+}
+
+impl ActivationFunction {
+    fn apply(&self, x: &Matrix) -> Matrix {
+        match self {
+            ActivationFunction::Sigmoid => sigmoid(x),
+            ActivationFunction::Tanh => tanh(x),
+            ActivationFunction::Linear => linear(x),
+        }
+    }
+
+    fn derivative(&self, x: &Matrix) -> Matrix {
+        match self {
+            ActivationFunction::Sigmoid => sigmoid_derivative(x),
+            ActivationFunction::Tanh => tanh_derivative(x),
+            ActivationFunction::Linear => linear_derivative(x),
+        }
+    }
+}
+
 /// A simple feedforward neural network with one hidden layer.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct NeuralNetwork {
     weights_input_hidden: Matrix,
     weights_hidden_output: Matrix,
     biases_hidden: Matrix,
     biases_output: Matrix,
     learning_rate: f64,
-    activation_function: fn(&Matrix) -> Matrix,
-    activation_function_derivative: fn(&Matrix) -> Matrix,
+    activation_function: ActivationFunction,
 }
 
 impl NeuralNetwork {
@@ -487,8 +518,7 @@ impl NeuralNetwork {
             biases_hidden: Matrix::random(hidden_size, 1),
             biases_output: Matrix::random(output_size, 1),
             learning_rate: 0.01,
-            activation_function: sigmoid,
-            activation_function_derivative: sigmoid_derivative,
+            activation_function: ActivationFunction::default(),
         }
     }
 
@@ -497,40 +527,15 @@ impl NeuralNetwork {
         self.learning_rate = learning_rate;
     }
 
-    /// Sets the activation function for the neural network.
-    pub fn set_activation_function(
-        &mut self,
-        activation_function: fn(&Matrix) -> Matrix,
-        activation_function_derivative: fn(&Matrix) -> Matrix,
-    ) {
-        self.activation_function = activation_function;
-        self.activation_function_derivative = activation_function_derivative;
-    }
-
-    pub fn set_linear_activation(&mut self) {
-        self.activation_function = linear;
-        self.activation_function_derivative = linear_derivative;
-    }
-
-    pub fn set_sigmoid_activation(&mut self) {
-        self.activation_function = sigmoid;
-        self.activation_function_derivative = sigmoid_derivative;
-    }
-
-    pub fn set_tanh_activation(&mut self) {
-        self.activation_function = tanh;
-        self.activation_function_derivative = tanh_derivative;
-    }
-
     /// Predicts the output for the given input using the neural network.
     pub fn predict(&self, input: Vec<f64>) -> Vec<f64> {
         // Generate the hidden outputs
         let input_matrix = Matrix::from_col_vec(input);
         let hidden_layer_input = &self.weights_input_hidden * &input_matrix + &self.biases_hidden;
-        let hidden_layer_output = (self.activation_function)(&hidden_layer_input);
+        let hidden_layer_output = self.activation_function.apply(&hidden_layer_input);
         // Generate the output's output
         let output_layer_input = &self.weights_hidden_output * &hidden_layer_output + &self.biases_output;
-        let output_layer_output = (self.activation_function)(&output_layer_input);
+        let output_layer_output = self.activation_function.apply(&output_layer_input);
         // Return the output as a vector
         output_layer_output.col(0)
     }
@@ -542,11 +547,11 @@ impl NeuralNetwork {
         // Generate the hidden outputs
         let input = Matrix::from_col_vec(input);
         let hidden_layer_input = &self.weights_input_hidden * &input + &self.biases_hidden;
-        let hidden_layer_output = (self.activation_function)(&hidden_layer_input);
+        let hidden_layer_output = self.activation_function.apply(&hidden_layer_input);
 
         // Generate the output's outputs
         let output_layer_input = &self.weights_hidden_output * &hidden_layer_output + &self.biases_output;
-        let output_layer_output = (self.activation_function)(&output_layer_input);
+        let output_layer_output = self.activation_function.apply(&output_layer_input);
         
         // Create target matrix
         let target = Matrix::from_col_vec(target);
@@ -556,7 +561,7 @@ impl NeuralNetwork {
         let output_errors = target - &output_layer_output;
 
         // Calculate gradients
-        let mut gradients = (self.activation_function_derivative)(&output_layer_output);
+        let mut gradients = self.activation_function.derivative(&output_layer_output);
         gradients.hadamar_product(&output_errors);
         gradients *= self.learning_rate;
 
@@ -574,7 +579,7 @@ impl NeuralNetwork {
         let hidden_errors = &weight_hidden_output_transposed * &output_errors;
 
         // Calculate hidden gradients
-        let mut hidden_gradient = (self.activation_function_derivative)(&hidden_layer_output);
+        let mut hidden_gradient = self.activation_function.derivative(&hidden_layer_output);
         hidden_gradient.hadamar_product(&hidden_errors);
         hidden_gradient *= self.learning_rate;
 
