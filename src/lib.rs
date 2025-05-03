@@ -1,6 +1,6 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::ops::{Add, AddAssign, Mul, MulAssign, Sub};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// A simple 2-dimensional matrix with basic operations
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -191,6 +191,19 @@ impl Sub<&Matrix> for Matrix  {
             }
         }
         result
+    }
+}
+
+impl SubAssign<&Matrix> for Matrix {
+    fn sub_assign(&mut self, other: &Matrix) {
+        if self.rows != other.rows || self.cols != other.cols {
+            panic!("Matrices must have the same dimensions to be added");
+        }
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                self.set(i, j, self.get(i, j) - other.get(i, j));
+            }
+        }
     }
 }
 
@@ -549,7 +562,8 @@ impl NeuralNetwork {
 
         // Calculate the error
         // ERROR = TARGET - OUTPUT
-        let output_errors = target - &output_layer_output;
+        let mut output_errors = target;
+        output_errors -= &output_layer_output;
 
         // Calculate gradients
         let mut gradients = output_layer_output;
@@ -579,7 +593,6 @@ impl NeuralNetwork {
         // Calculate input -> hidden deltas
         let inputs_transposed = input_matrix.transpose();
         let weight_input_hidden_deltas = &hidden_gradient * &inputs_transposed;
-
         self.weights_input_hidden += &weight_input_hidden_deltas;
         // Adjust the bias by its deltas (which is just the gradient)
         self.biases_hidden += &hidden_gradient;
