@@ -117,30 +117,13 @@ impl Matrix {
         self.data[row][col] = value;
     }
 
-    /// Returns the matrix resulting from 
-    /// applying the function `f` to each element of the matrix.
-    pub fn map<F>(&self, f: F) -> Matrix
-    where
-        F: Fn(f64) -> f64,
-    {
-        let mut result = Matrix::new(self.rows, self.cols);
-        for i in 0..self.rows {
-            for j in 0..self.cols {
-                result.set(i, j, f(self.get(i, j)));
-            }
-        }
-        result
-    }
-
-    /// Applies the function `f` to each element of the matrix in place.
-    /// This is an in-place operation.
-    pub fn map_mut<F>(&mut self, f: F)
+    pub fn apply<F>(&mut self, f: F)
     where
         F: Fn(f64) -> f64,
     {
         for i in 0..self.rows {
             for j in 0..self.cols {
-                self.set(i, j, f(self.get(i, j)));
+                self.data[i][j] = f(self.data[i][j]);
             }
         }
     }
@@ -423,18 +406,8 @@ mod matrix_tests {
 
     #[test]
     fn it_maps() {
-        let m = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
-        let result = m.map(|x| x * 2.0);
-        assert_eq!(result.get(0, 0), 2.0);
-        assert_eq!(result.get(0, 1), 4.0);
-        assert_eq!(result.get(1, 0), 6.0);
-        assert_eq!(result.get(1, 1), 8.0);
-    }
-
-    #[test]
-    fn it_maps_mut() {
         let mut m = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
-        m.map_mut(|x| x * 2.0);
+        m.apply(|x| x * 2.0);
         assert_eq!(m.get(0, 0), 2.0);
         assert_eq!(m.get(0, 1), 4.0);
         assert_eq!(m.get(1, 0), 6.0);
@@ -442,28 +415,26 @@ mod matrix_tests {
     }
 }
 
-fn sigmoid(x: &Matrix) -> Matrix {
-    x.map(|x| 1.0 / (1.0 + (-x).exp()))
+fn sigmoid(x: &mut Matrix) {
+    x.apply(|x| 1.0 / (1.0 + (-x).exp()))
 }
 
-fn sigmoid_derivative(x: &Matrix) -> Matrix {
-    x.map(|x| x * (1.0 - x))
+fn sigmoid_derivative(x: &mut Matrix) {
+    x.apply(|x| x * (1.0 - x))
 }
 
-fn tanh(x: &Matrix) -> Matrix {
-    x.map(|x| x.tanh())
+fn tanh(x: &mut Matrix) {
+    x.apply(|x| x.tanh())
 }
 
-fn tanh_derivative(x: &Matrix) -> Matrix {
-    x.map(|x| 1.0 - x.tanh().powi(2))
+fn tanh_derivative(x: &mut Matrix) {
+    x.apply(|x| 1.0 - x.tanh().powi(2))
 }
 
-fn linear(x: &Matrix) -> Matrix {
-    x.clone()
-}
+fn linear(_: &mut Matrix) {}
 
-fn linear_derivative(x: &Matrix) -> Matrix {
-    x.map(|_| 1.0)
+fn linear_derivative(x: &mut Matrix) {
+    x.apply(|_| 1.0)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -480,7 +451,7 @@ impl Default for ActivationFunction {
 }
 
 impl ActivationFunction {
-    fn apply(&self, x: &Matrix) -> Matrix {
+    fn apply(&self, x: &mut Matrix) {
         match self {
             ActivationFunction::Sigmoid => sigmoid(x),
             ActivationFunction::Tanh => tanh(x),
@@ -488,7 +459,7 @@ impl ActivationFunction {
         }
     }
 
-    fn derivative(&self, x: &Matrix) -> Matrix {
+    fn derivative(&self, x: &mut Matrix) {
         match self {
             ActivationFunction::Sigmoid => sigmoid_derivative(x),
             ActivationFunction::Tanh => tanh_derivative(x),
@@ -546,11 +517,14 @@ impl NeuralNetwork {
     pub fn predict(&self, input: Vec<f64>) -> Vec<f64> {
         // Generate the hidden outputs
         let input_matrix = Matrix::from_col_vec(input);
-        let hidden_layer_input = &self.weights_input_hidden * &input_matrix + &self.biases_hidden;
-        let hidden_layer_output = self.activation_function.apply(&hidden_layer_input);
+        let mut hidden_layer_input = &self.weights_input_hidden * &input_matrix;
+        hidden_layer_input += &self.biases_hidden;
+        let mut hidden_layer_output = hidden_layer_input;
+        self.activation_function.apply(&mut hidden_layer_output);
         // Generate the output's output
         let output_layer_input = &self.weights_hidden_output * &hidden_layer_output + &self.biases_output;
-        let output_layer_output = self.activation_function.apply(&output_layer_input);
+        let mut output_layer_output = output_layer_input;
+        self.activation_function.apply(&mut output_layer_output);
         // Return the output as a vector
         output_layer_output.col(0)
     }
@@ -560,13 +534,15 @@ impl NeuralNetwork {
     /// The training process involves forward propagation and backpropagation to adjust the weights and biases.
     pub fn train(&mut self, input: Vec<f64>, target: Vec<f64>) {
         // Generate the hidden outputs
-        let input = Matrix::from_col_vec(input);
-        let hidden_layer_input = &self.weights_input_hidden * &input + &self.biases_hidden;
-        let hidden_layer_output = self.activation_function.apply(&hidden_layer_input);
-
+        let input_matrix = Matrix::from_col_vec(input);
+        let mut hidden_layer_input = &self.weights_input_hidden * &input_matrix;
+        hidden_layer_input += &self.biases_hidden;
+        let mut hidden_layer_output = hidden_layer_input;
+        self.activation_function.apply(&mut hidden_layer_output);
         // Generate the output's outputs
         let output_layer_input = &self.weights_hidden_output * &hidden_layer_output + &self.biases_output;
-        let output_layer_output = self.activation_function.apply(&output_layer_input);
+        let mut output_layer_output = output_layer_input;
+        self.activation_function.apply(&mut output_layer_output);
         
         // Create target matrix
         let target = Matrix::from_col_vec(target);
@@ -576,7 +552,8 @@ impl NeuralNetwork {
         let output_errors = target - &output_layer_output;
 
         // Calculate gradients
-        let mut gradients = self.activation_function.derivative(&output_layer_output);
+        let mut gradients = output_layer_output;
+        self.activation_function.derivative(&mut gradients);
         gradients.hadamar_product(&output_errors);
         gradients *= self.learning_rate;
 
@@ -594,12 +571,13 @@ impl NeuralNetwork {
         let hidden_errors = &weight_hidden_output_transposed * &output_errors;
 
         // Calculate hidden gradients
-        let mut hidden_gradient = self.activation_function.derivative(&hidden_layer_output);
+        let mut hidden_gradient = hidden_layer_output;
+        self.activation_function.derivative(&mut hidden_gradient);
         hidden_gradient.hadamar_product(&hidden_errors);
         hidden_gradient *= self.learning_rate;
 
         // Calculate input -> hidden deltas
-        let inputs_transposed = input.transpose();
+        let inputs_transposed = input_matrix.transpose();
         let weight_input_hidden_deltas = &hidden_gradient * &inputs_transposed;
 
         self.weights_input_hidden += &weight_input_hidden_deltas;
