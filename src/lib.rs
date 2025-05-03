@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
@@ -20,8 +20,7 @@ impl Matrix {
 
     /// Creates a new matrix with the given number of rows and columns,
     /// initialized with random values between -1.0 and 1.0.
-    pub fn random(rows: usize, cols: usize) -> Self {
-        let mut rng = rand::r#rng();
+    pub fn random(rng: &mut StdRng, rows: usize, cols: usize) -> Self {
         let data = (0..rows)
             .map(|_| (0..cols).map(|_| rng.random_range(-1.0..1.0)).collect())
             .collect();
@@ -278,7 +277,8 @@ mod matrix_tests {
 
     #[test]
     fn it_creates_random_matrix() {
-        let m = Matrix::random(2, 3);
+        let mut rng = StdRng::from_os_rng();
+        let m = Matrix::random(&mut rng, 2, 3);
         assert_eq!(m.rows, 2);
         assert_eq!(m.cols, 3);
         assert_eq!(m.data.len(), 2);
@@ -495,12 +495,16 @@ pub struct NeuralNetwork {
 impl NeuralNetwork {
     /// Creates a new neural network with the given sizes for input, hidden, and output layers.
     /// The weights and biases are initialized randomly.
-    pub fn new(input_size: usize, hidden_size: usize, output_size: usize) -> Self {
+    pub fn new(input_size: usize, hidden_size: usize, output_size: usize, rng: Option<&mut StdRng>) -> Self {
+        let rng = match rng {
+            Some(rng) => rng,
+            None => &mut StdRng::from_os_rng()
+        };
         NeuralNetwork {
-            weights_input_hidden: Matrix::random(hidden_size, input_size),
-            weights_hidden_output: Matrix::random(output_size, hidden_size),
-            biases_hidden: Matrix::random(hidden_size, 1),
-            biases_output: Matrix::random(output_size, 1),
+            weights_input_hidden: Matrix::random(rng, hidden_size, input_size),
+            weights_hidden_output: Matrix::random(rng, output_size, hidden_size),
+            biases_hidden: Matrix::random(rng, hidden_size, 1),
+            biases_output: Matrix::random(rng, output_size, 1),
             learning_rate: 0.01,
             activation_function: ActivationFunction::default(),
         }
@@ -598,8 +602,7 @@ impl NeuralNetwork {
         self.biases_hidden += &hidden_gradient;
     }
 
-    pub fn mutate(&mut self, mutation_rate: f64) {
-        let mut rng = rand::rng();
+    pub fn mutate(&mut self, rng: &mut StdRng, mutation_rate: f64) {
         for i in 0..self.weights_input_hidden.rows() {
             for j in 0..self.weights_input_hidden.cols() {
                 if rng.random::<f64>() < mutation_rate {
@@ -630,7 +633,7 @@ impl NeuralNetwork {
 pub mod nn_tests {
     #[test]
     fn it_creates_a_neural_network() {
-        let m = super::NeuralNetwork::new(3, 5, 2);
+        let m = super::NeuralNetwork::new(3, 5, 2, None);
         assert_eq!(m.weights_input_hidden.rows(), 5);
         assert_eq!(m.weights_input_hidden.cols(), 3);
         assert_eq!(m.weights_hidden_output.rows(), 2);
@@ -643,7 +646,7 @@ pub mod nn_tests {
 
     #[test]
     pub fn it_predicts() {
-        let m = super::NeuralNetwork::new(3, 5, 2);
+        let m = super::NeuralNetwork::new(3, 5, 2, None);
         let input = vec![0.5, 0.2, 0.1];
         let output = m.predict(input.clone());
         assert_eq!(output.len(), 2);
