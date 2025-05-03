@@ -467,7 +467,7 @@ fn linear_derivative(x: &Matrix) -> Matrix {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-enum ActivationFunction {
+pub enum ActivationFunction {
     Sigmoid,
     Tanh,
     Linear,
@@ -522,9 +522,24 @@ impl NeuralNetwork {
         }
     }
 
+    /// Returns the learning rate of the neural network.
+    pub fn learning_rate(&self) -> f64 {
+        self.learning_rate
+    }
+
     /// Sets the learning rate for the neural network.
     pub fn set_learning_rate(&mut self, learning_rate: f64) {
         self.learning_rate = learning_rate;
+    }
+
+    /// Returns the activation function of the neural network.
+    pub fn activation_function(&self) -> &ActivationFunction {
+        &self.activation_function
+    }
+
+    /// Sets the activation function for the neural network.
+    pub fn set_activation_function(&mut self, activation_function: ActivationFunction) {
+        self.activation_function = activation_function;
     }
 
     /// Predicts the output for the given input using the neural network.
