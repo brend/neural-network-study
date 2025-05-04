@@ -212,7 +212,7 @@ impl Mul<f64> for Matrix {
         let mut result = Matrix::new(self.rows, self.cols);
         for i in 0..self.rows {
             for j in 0..self.cols {
-                result.set(i, j, self.get(i, j) * scalar);
+                result.data[i * self.cols + j] = self.data[i * self.cols + j] * scalar;
             }
         }
         result
@@ -224,7 +224,7 @@ impl MulAssign<f64> for Matrix {
     fn mul_assign(&mut self, scalar: f64) {
         for i in 0..self.rows {
             for j in 0..self.cols {
-                self.set(i, j, self.get(i, j) * scalar);
+                self.data[i * self.cols + j] *= scalar;
             }
         }
     }
@@ -244,7 +244,7 @@ impl Mul<&Matrix> for &Matrix {
             for j in 0..other.cols {
                 let mut sum = 0.0;
                 for k in 0..self.cols {
-                    sum += self.get(i, k) * other.get(k, j);
+                    sum += self.data[i * self.cols + k] * other.data[k * other.cols + j];
                 }
                 result.set(i, j, sum);
             }
