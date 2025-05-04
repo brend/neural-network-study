@@ -1,4 +1,4 @@
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::StdRng};
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
@@ -7,22 +7,22 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 pub struct Matrix {
     rows: usize,
     cols: usize,
-    data: Vec<Vec<f64>>,
+    data: Vec<f64>,
 }
 
 impl Matrix {
     /// Creates a new matrix with the given number of rows and columns,
     /// initialized to zero.
     pub fn new(rows: usize, cols: usize) -> Self {
-        let data = vec![vec![0.0; cols]; rows];
+        let data = vec![0.0; rows * cols];
         Self { rows, cols, data }
     }
 
     /// Creates a new matrix with the given number of rows and columns,
     /// initialized with random values between -1.0 and 1.0.
     pub fn random(rng: &mut StdRng, rows: usize, cols: usize) -> Self {
-        let data = (0..rows)
-            .map(|_| (0..cols).map(|_| rng.random_range(-1.0..1.0)).collect())
+        let data = (0..(rows * cols))
+            .map(|_| rng.random_range(-1.0..1.0))
             .collect();
         Self { rows, cols, data }
     }
@@ -30,13 +30,9 @@ impl Matrix {
     /// Creates a new matrix from a 2D vector.
     /// The outer vector represents the rows, and the inner vectors represent the columns.
     /// Panics if the inner vectors have different lengths.
-    pub fn from_vec(data: Vec<Vec<f64>>) -> Self {
-        let rows = data.len();
-        let cols = if rows > 0 { data[0].len() } else { 0 };
-        for row in &data {
-            if row.len() != cols {
-                panic!("All rows must have the same number of columns");
-            }
+    pub fn from_vec(rows: usize, cols: usize, data: Vec<f64>) -> Self {
+        if data.len() != rows * cols {
+            panic!("data length does not match row and col count")
         }
         Self { rows, cols, data }
     }
@@ -45,19 +41,18 @@ impl Matrix {
     pub fn from_col_vec(data: Vec<f64>) -> Self {
         let rows = data.len();
         let cols = 1;
-        let data = data.into_iter().map(|x| vec![x]).collect();
-        Self { rows, cols, data }
+        Self::from_vec(rows, cols, data)
     }
 
     /// Transposes the matrix.
     pub fn transpose(&self) -> Self {
-        let mut transposed_data = vec![vec![0.0; self.rows]; self.cols];
+        let mut transposed_data = vec![0.0; self.rows * self.cols];
         for i in 0..self.rows {
             for j in 0..self.cols {
-                transposed_data[j][i] = self.data[i][j];
+                transposed_data[j * self.rows + i] = self.data[i * self.cols + j];
             }
-        }   
-        Self::from_vec(transposed_data)
+        }
+        Self::from_vec(self.cols, self.rows, transposed_data)
     }
 
     /// Returns the number of rows in the matrix.
@@ -72,20 +67,22 @@ impl Matrix {
 
     /// Returns the column at the given index as a vector.
     /// Panics if the index is out of bounds.
-    pub fn col(&self, index: usize) -> Vec<f64> {
-        if index >= self.cols {
+    pub fn col(&self, col: usize) -> Vec<f64> {
+        if col >= self.cols {
             panic!("Index out of bounds");
         }
-        (0..self.rows).map(|i| self.data[i][index]).collect()
+        (0..self.rows)
+            .map(|i| self.data[i * self.cols + col])
+            .collect()
     }
 
     /// Returns a reference to the data in the matrix.
-    pub fn data(&self) -> &Vec<Vec<f64>> {
+    pub fn data(&self) -> &Vec<f64> {
         &self.data
     }
 
     /// Returns a mutable reference to the data in the matrix.
-    pub fn data_mut(&mut self) -> &mut Vec<Vec<f64>> {
+    pub fn data_mut(&mut self) -> &mut Vec<f64> {
         &mut self.data
     }
 
@@ -95,7 +92,7 @@ impl Matrix {
         if row >= self.rows || col >= self.cols {
             panic!("Index out of bounds");
         }
-        self.data[row][col]
+        self.data[row * self.cols + col]
     }
 
     /// Returns a mutable reference to the value at the given row and column.
@@ -104,7 +101,7 @@ impl Matrix {
         if row >= self.rows || col >= self.cols {
             panic!("Index out of bounds");
         }
-        &mut self.data[row][col]
+        &mut self.data[row * self.cols + col]
     }
 
     /// Sets the value at the given row and column.
@@ -113,7 +110,7 @@ impl Matrix {
         if row >= self.rows || col >= self.cols {
             panic!("Index out of bounds");
         }
-        self.data[row][col] = value;
+        self.data[row * self.cols + col] = value;
     }
 
     pub fn apply<F>(&mut self, f: F)
@@ -122,7 +119,8 @@ impl Matrix {
     {
         for i in 0..self.rows {
             for j in 0..self.cols {
-                self.data[i][j] = f(self.data[i][j]);
+                let index = i * self.cols + j;
+                self.data[index] = f(self.data[index]);
             }
         }
     }
@@ -174,7 +172,7 @@ impl AddAssign<&Matrix> for Matrix {
     }
 }
 
-impl Sub<&Matrix> for Matrix  {
+impl Sub<&Matrix> for Matrix {
     type Output = Matrix;
 
     /// Subtracts another matrix from this matrix, component-wise.
@@ -264,15 +262,7 @@ mod matrix_tests {
         let m = Matrix::new(2, 3);
         assert_eq!(m.rows(), 2);
         assert_eq!(m.cols(), 3);
-        assert_eq!(m.data().len(), 2);
-        assert_eq!(m.data[0].len(), 3);
-        assert_eq!(m.data[1].len(), 3);
-        assert_eq!(m.data[0][0], 0.0);
-        assert_eq!(m.data[0][1], 0.0);
-        assert_eq!(m.data[0][2], 0.0);
-        assert_eq!(m.data[1][0], 0.0);
-        assert_eq!(m.data[1][1], 0.0);
-        assert_eq!(m.data[1][2], 0.0);
+        assert_eq!(m.data().len(), 2 * 3);
     }
 
     #[test]
@@ -281,20 +271,18 @@ mod matrix_tests {
         let m = Matrix::random(&mut rng, 2, 3);
         assert_eq!(m.rows, 2);
         assert_eq!(m.cols, 3);
-        assert_eq!(m.data.len(), 2);
-        assert_eq!(m.data[0].len(), 3);
-        assert_eq!(m.data[1].len(), 3);
+        assert_eq!(m.data.len(), 2 * 3);
         for i in 0..2 {
             for j in 0..3 {
-                assert!(m.data[i][j] >= -1.0 && m.data[i][j] <= 1.0);
+                assert!(m.get(i, j) >= -1.0 && m.get(i, j) <= 1.0);
             }
         }
     }
 
     #[test]
     fn it_creates_a_matrix_from_a_vector() {
-        let v = vec![vec![1.0, 2.0, 5.0], vec![3.0, 4.0, 6.0]];
-        let m = Matrix::from_vec(v.clone());
+        let v = vec![1.0, 2.0, 5.0, 3.0, 4.0, 6.0];
+        let m = Matrix::from_vec(2, 3, v.clone());
         assert_eq!(m.rows, 2);
         assert_eq!(m.cols, 3);
         assert_eq!(m.data, v);
@@ -302,16 +290,22 @@ mod matrix_tests {
 
     #[test]
     fn it_transposes_matrix() {
-        let m = Matrix::from_vec(vec![vec![1.0, 2.0, 5.0], vec![3.0, 4.0, 6.0]]);
+        let m = Matrix::from_vec(
+            3,
+            2,
+            vec![
+                /* row 0 */ 1.0, 2.0, /* row 1 */ 5.0, 3.0, /* row 2 */ 4.0, 6.0,
+            ],
+        );
         let transposed = m.transpose();
-        assert_eq!(transposed.rows, 3);
-        assert_eq!(transposed.cols, 2);
-        assert_eq!(transposed.data[0][0], 1.0);
-        assert_eq!(transposed.data[0][1], 3.0);
-        assert_eq!(transposed.data[1][0], 2.0);
-        assert_eq!(transposed.data[1][1], 4.0);
-        assert_eq!(transposed.data[2][0], 5.0);
-        assert_eq!(transposed.data[2][1], 6.0);
+        assert_eq!(transposed.rows, 2);
+        assert_eq!(transposed.cols, 3);
+        assert_eq!(transposed.get(0, 0), 1.0);
+        assert_eq!(transposed.get(0, 1), 5.0);
+        assert_eq!(transposed.get(0, 2), 4.0);
+        assert_eq!(transposed.get(1, 0), 2.0);
+        assert_eq!(transposed.get(1, 1), 3.0);
+        assert_eq!(transposed.get(1, 2), 6.0);
     }
 
     #[test]
@@ -367,8 +361,8 @@ mod matrix_tests {
     #[test]
     fn it_returns_mutable_data() {
         let mut m = Matrix::new(2, 3);
-        m.data_mut()[0][0] = 1.0;
-        m.data_mut()[1][2] = 2.0;
+        m.data_mut()[0] = 1.0;
+        m.data_mut()[1 * 3 + 2] = 2.0;
         assert_eq!(m.get(0, 0), 1.0);
         assert_eq!(m.get(1, 2), 2.0);
         assert_eq!(m.get(0, 1), 0.0);
@@ -377,8 +371,8 @@ mod matrix_tests {
 
     #[test]
     fn it_adds_matrices() {
-        let m1 = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
-        let m2 = Matrix::from_vec(vec![vec![5.0, 6.0], vec![7.0, 8.0]]);
+        let m1 = Matrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]);
+        let m2 = Matrix::from_vec(2, 2, vec![5.0, 6.0, 7.0, 8.0]);
         let result = m1 + &m2;
         assert_eq!(result.get(0, 0), 6.0);
         assert_eq!(result.get(0, 1), 8.0);
@@ -388,8 +382,8 @@ mod matrix_tests {
 
     #[test]
     fn it_adds_and_assigns() {
-        let mut m1 = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
-        let m2 = Matrix::from_vec(vec![vec![5.0, 6.0], vec![7.0, 8.0]]);
+        let mut m1 = Matrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]);
+        let m2 = Matrix::from_vec(2, 2, vec![5.0, 6.0, 7.0, 8.0]);
         m1 += &m2;
         assert_eq!(m1.get(0, 0), 6.0);
         assert_eq!(m1.get(0, 1), 8.0);
@@ -399,7 +393,7 @@ mod matrix_tests {
 
     #[test]
     fn it_multiplies_by_scalar() {
-        let m = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        let m = Matrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]);
         let result = m * 2.0;
         assert_eq!(result.get(0, 0), 2.0);
         assert_eq!(result.get(0, 1), 4.0);
@@ -409,7 +403,7 @@ mod matrix_tests {
 
     #[test]
     fn it_multiplies_by_scalar_in_place() {
-        let mut m = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        let mut m = Matrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]);
         m *= 2.0;
         assert_eq!(m.get(0, 0), 2.0);
         assert_eq!(m.get(0, 1), 4.0);
@@ -419,7 +413,7 @@ mod matrix_tests {
 
     #[test]
     fn it_maps() {
-        let mut m = Matrix::from_vec(vec![vec![1.0, 2.0], vec![3.0, 4.0]]);
+        let mut m = Matrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]);
         m.apply(|x| x * 2.0);
         assert_eq!(m.get(0, 0), 2.0);
         assert_eq!(m.get(0, 1), 4.0);
@@ -495,10 +489,15 @@ pub struct NeuralNetwork {
 impl NeuralNetwork {
     /// Creates a new neural network with the given sizes for input, hidden, and output layers.
     /// The weights and biases are initialized randomly.
-    pub fn new(input_size: usize, hidden_size: usize, output_size: usize, rng: Option<&mut StdRng>) -> Self {
+    pub fn new(
+        input_size: usize,
+        hidden_size: usize,
+        output_size: usize,
+        rng: Option<&mut StdRng>,
+    ) -> Self {
         let rng = match rng {
             Some(rng) => rng,
-            None => &mut StdRng::from_os_rng()
+            None => &mut StdRng::from_os_rng(),
         };
         NeuralNetwork {
             weights_input_hidden: Matrix::random(rng, hidden_size, input_size),
@@ -539,7 +538,8 @@ impl NeuralNetwork {
         let mut hidden_layer_output = hidden_layer_input;
         self.activation_function.apply(&mut hidden_layer_output);
         // Generate the output's output
-        let output_layer_input = &self.weights_hidden_output * &hidden_layer_output + &self.biases_output;
+        let output_layer_input =
+            &self.weights_hidden_output * &hidden_layer_output + &self.biases_output;
         let mut output_layer_output = output_layer_input;
         self.activation_function.apply(&mut output_layer_output);
         // Return the output as a vector
@@ -557,10 +557,11 @@ impl NeuralNetwork {
         let mut hidden_layer_output = hidden_layer_input;
         self.activation_function.apply(&mut hidden_layer_output);
         // Generate the output's outputs
-        let output_layer_input = &self.weights_hidden_output * &hidden_layer_output + &self.biases_output;
+        let output_layer_input =
+            &self.weights_hidden_output * &hidden_layer_output + &self.biases_output;
         let mut output_layer_output = output_layer_input;
         self.activation_function.apply(&mut output_layer_output);
-        
+
         // Create target matrix
         let target = Matrix::from_col_vec(target);
 
@@ -606,14 +607,16 @@ impl NeuralNetwork {
         for i in 0..self.weights_input_hidden.rows() {
             for j in 0..self.weights_input_hidden.cols() {
                 if rng.random::<f64>() < mutation_rate {
-                    self.weights_input_hidden.set(i, j, rng.random_range(-1.0..1.0));
+                    self.weights_input_hidden
+                        .set(i, j, rng.random_range(-1.0..1.0));
                 }
             }
         }
         for i in 0..self.weights_hidden_output.rows() {
             for j in 0..self.weights_hidden_output.cols() {
                 if rng.random::<f64>() < mutation_rate {
-                    self.weights_hidden_output.set(i, j, rng.random_range(-1.0..1.0));
+                    self.weights_hidden_output
+                        .set(i, j, rng.random_range(-1.0..1.0));
                 }
             }
         }
