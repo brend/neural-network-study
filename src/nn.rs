@@ -153,7 +153,7 @@ impl NeuralNetwork {
         // Calculate gradients
         let mut gradients = output_layer_output;
         self.activation_function.derivative(&mut gradients);
-        gradients.hadamar_product(&output_errors);
+        gradients.hadamard_product(&output_errors);
         gradients *= self.learning_rate;
 
         // Calculcate deltas
@@ -172,7 +172,7 @@ impl NeuralNetwork {
         // Calculate hidden gradients
         let mut hidden_gradient = hidden_layer_output;
         self.activation_function.derivative(&mut hidden_gradient);
-        hidden_gradient.hadamar_product(&hidden_errors);
+        hidden_gradient.hadamard_product(&hidden_errors);
         hidden_gradient *= self.learning_rate;
 
         // Calculate input -> hidden deltas

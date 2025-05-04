@@ -125,7 +125,7 @@ impl Matrix {
         }
     }
 
-    pub fn hadamar_product(&mut self, other: &Matrix) {
+    pub fn hadamard_product(&mut self, other: &Matrix) {
         if self.rows != other.rows || self.cols != other.cols {
             panic!("Matrices must have the same dimensions for Hadamard product");
         }
@@ -255,6 +255,8 @@ impl Mul<&Matrix> for &Matrix {
 
 #[cfg(test)]
 mod matrix_tests {
+    use rand::SeedableRng;
+
     use super::*;
 
     #[test]
