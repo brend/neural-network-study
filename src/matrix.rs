@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// A simple 2-dimensional matrix with basic operations
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Matrix {
     rows: usize,
     cols: usize,
@@ -240,13 +240,15 @@ impl Mul<&Matrix> for &Matrix {
             panic!("Matrices have incompatible dimensions for multiplication");
         }
         let mut result = Matrix::new(self.rows, other.cols);
+        // Transpose other matrix for improved cache locality
+        let other_t = other.transpose();
         for i in 0..self.rows {
-            for j in 0..other.cols {
+            for j in 0..other_t.rows {
                 let mut sum = 0.0;
                 for k in 0..self.cols {
-                    sum += self.data[i * self.cols + k] * other.data[k * other.cols + j];
+                    sum += self.data[i * self.cols + k] * other_t.data[j * other_t.cols + k];
                 }
-                result.set(i, j, sum);
+                result.data[i * other.cols + j] = sum;
             }
         }
         result
@@ -411,6 +413,15 @@ mod matrix_tests {
         assert_eq!(m.get(0, 1), 4.0);
         assert_eq!(m.get(1, 0), 6.0);
         assert_eq!(m.get(1, 1), 8.0);
+    }
+
+    #[test]
+    fn it_multiplies_matrices() {
+        let m = Matrix::from_vec(2, 3, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        let n = Matrix::from_vec(3, 2, vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0]);
+        let e = Matrix::from_vec(2, 2, vec![58.0, 64.0, 139.0, 154.0]);
+        let r = &m * &n;
+        assert_eq!(r, e);
     }
 
     #[test]
