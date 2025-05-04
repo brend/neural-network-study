@@ -6,10 +6,10 @@ fn main() {
     let cols_left = 128;
     let rows_right = 128;
     let cols_right = 512;
-    let multiplications = 1000;
+    let multiplications = 50;
     let dist = Uniform::new(-1.0, 1.0).unwrap();
 
-    for i in 0..multiplications {
+    for _ in 0..multiplications {
         let rng = rand::rng();
         let data: Vec<f64> = rng.sample_iter(&dist).take(rows_left * cols_left).collect();
         let left = Matrix::from_vec(rows_left, cols_left, data);
@@ -20,9 +20,5 @@ fn main() {
             .collect();
         let right = Matrix::from_vec(rows_right, cols_right, data);
         let _result = &left * &right;
-
-        // if i % 100 == 0 {
-        println!("iteration {}", i);
-        // }
     }
 }
