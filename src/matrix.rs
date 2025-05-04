@@ -1,4 +1,5 @@
 use rand::{Rng, rngs::StdRng};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
@@ -135,6 +136,74 @@ impl Matrix {
             }
         }
     }
+
+    fn multiply_matrix_parallelized(&self, other: &Matrix) -> Matrix {
+        if self.cols != other.rows {
+            panic!("Matrices have incompatible dimensions for multiplication");
+        }
+
+        let other_t = Arc::new(other.transpose()); // wrap in Arc
+        let self_data = &self.data;
+        let other_data = &other_t.data;
+        let self_cols = self.cols;
+        let other_cols = other.cols;
+
+        let result_data: Vec<f64> = (0..self.rows)
+            .into_par_iter()
+            .flat_map_iter(|i| {
+                (0..other_t.rows).map(move |j| {
+                    let mut sum = 0.0;
+                    let row_start = i * self_cols;
+                    let col_start = j * self_cols;
+                    for k in 0..self_cols {
+                        sum += self_data[row_start + k] * other_data[col_start + k];
+                    }
+                    sum
+                })
+            })
+            .collect();
+
+        Matrix::from_vec(self.rows, other_cols, result_data)
+    }
+
+    fn multiply_matrix_naive(&self, other: &Matrix) -> Matrix {
+        if self.cols != other.rows {
+            panic!("Matrices have incompatible dimensions for multiplication");
+        }
+
+        let other_t = other.transpose(); // for better cache locality
+        let mut result = Matrix::new(self.rows, other.cols);
+
+        let self_data = &self.data;
+        let other_data = &other_t.data;
+        let result_data = &mut result.data;
+
+        let m = self.rows;
+        let n = self.cols;
+        let p = other.cols;
+
+        for i in 0..m {
+            for j in 0..p {
+                let mut sum = 0.0;
+                let a_row = i * n;
+                let b_row = j * n; // because other_t has shape [p x n]
+                for k in 0..n {
+                    sum += self_data[a_row + k] * other_data[b_row + k];
+                }
+                result_data[i * p + j] = sum;
+            }
+        }
+
+        result
+    }
+
+    pub fn multiply_matrix(&self, other: &Matrix) -> Matrix {
+        if self.rows * other.cols >= 128 * 128 {
+            self.multiply_matrix_parallelized(other)
+        } else {
+            self.multiply_matrix_naive(other)
+        }
+    }
 }
 
 impl Add<&Matrix> for Matrix {
@@ -230,28 +299,13 @@ impl MulAssign<f64> for Matrix {
     }
 }
 
+use std::sync::Arc;
+
 impl Mul<&Matrix> for &Matrix {
     type Output = Matrix;
 
-    /// Multiplies two matrices together.
-    /// Panics if the matrices have incompatible dimensions.
     fn mul(self, other: &Matrix) -> Matrix {
-        if self.cols != other.rows {
-            panic!("Matrices have incompatible dimensions for multiplication");
-        }
-        let mut result = Matrix::new(self.rows, other.cols);
-        // Transpose other matrix for improved cache locality
-        let other_t = other.transpose();
-        for i in 0..self.rows {
-            for j in 0..other_t.rows {
-                let mut sum = 0.0;
-                for k in 0..self.cols {
-                    sum += self.data[i * self.cols + k] * other_t.data[j * other_t.cols + k];
-                }
-                result.data[i * other.cols + j] = sum;
-            }
-        }
-        result
+        self.multiply_matrix(other)
     }
 }
 
