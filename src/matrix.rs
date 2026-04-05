@@ -22,8 +22,14 @@ impl Matrix {
     /// Creates a new matrix with the given number of rows and columns,
     /// initialized with random values between -1.0 and 1.0.
     pub fn random(rng: &mut StdRng, rows: usize, cols: usize) -> Self {
+        Self::random_range(rng, rows, cols, -1.0, 1.0)
+    }
+
+    /// Creates a new matrix with the given number of rows and columns,
+    /// initialized with random values in the provided half-open range.
+    pub fn random_range(rng: &mut StdRng, rows: usize, cols: usize, min: f64, max: f64) -> Self {
         let data = (0..(rows * cols))
-            .map(|_| rng.random_range(-1.0..1.0))
+            .map(|_| rng.random_range(min..max))
             .collect();
         Self { rows, cols, data }
     }
