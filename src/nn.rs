@@ -315,6 +315,7 @@ impl NeuralNetwork {
 #[cfg(test)]
 pub mod nn_tests {
     use rand::{SeedableRng, rngs::StdRng};
+    use serde_json;
 
     #[test]
     fn it_creates_a_neural_network() {
@@ -429,5 +430,78 @@ pub mod nn_tests {
 
         assert!(nn.biases_hidden.data().iter().all(|value| *value == 0.0));
         assert!(nn.biases_output.data().iter().all(|value| *value == 0.0));
+    }
+
+    #[test]
+    fn new_uses_xavier_weight_ranges() {
+        let mut rng = StdRng::seed_from_u64(7);
+        let nn = super::NeuralNetwork::new(3, 5, 2, Some(&mut rng)).unwrap();
+        let limit_input_hidden = (6.0_f64 / 8.0_f64).sqrt();
+        let limit_hidden_output = (6.0_f64 / 7.0_f64).sqrt();
+
+        assert!(nn
+            .weights_input_hidden
+            .data()
+            .iter()
+            .all(|value| *value >= -limit_input_hidden && *value < limit_input_hidden));
+        assert!(nn
+            .weights_hidden_output
+            .data()
+            .iter()
+            .all(|value| *value >= -limit_hidden_output && *value < limit_hidden_output));
+    }
+
+    #[test]
+    fn it_learns_the_xor_function() {
+        let mut rng = StdRng::seed_from_u64(99);
+        let mut nn = super::NeuralNetwork::new(2, 4, 1, Some(&mut rng)).unwrap();
+        nn.set_learning_rate(0.5);
+
+        let training_data = [
+            (vec![0.0, 0.0], vec![0.0]),
+            (vec![0.0, 1.0], vec![1.0]),
+            (vec![1.0, 0.0], vec![1.0]),
+            (vec![1.0, 1.0], vec![0.0]),
+        ];
+
+        for _ in 0..20_000 {
+            for (input, target) in &training_data {
+                nn.train(input.clone(), target.clone()).unwrap();
+            }
+        }
+
+        assert!(nn.predict(vec![0.0, 0.0]).unwrap()[0] < 0.2);
+        assert!(nn.predict(vec![0.0, 1.0]).unwrap()[0] > 0.8);
+        assert!(nn.predict(vec![1.0, 0.0]).unwrap()[0] > 0.8);
+        assert!(nn.predict(vec![1.0, 1.0]).unwrap()[0] < 0.2);
+    }
+
+    #[test]
+    fn serde_round_trip_preserves_predictions() {
+        let mut rng = StdRng::seed_from_u64(123);
+        let mut nn = super::NeuralNetwork::new(2, 4, 1, Some(&mut rng)).unwrap();
+        nn.set_learning_rate(0.5);
+
+        let training_data = [
+            (vec![0.0, 0.0], vec![0.0]),
+            (vec![0.0, 1.0], vec![1.0]),
+            (vec![1.0, 0.0], vec![1.0]),
+            (vec![1.0, 1.0], vec![0.0]),
+        ];
+
+        for _ in 0..5_000 {
+            for (input, target) in &training_data {
+                nn.train(input.clone(), target.clone()).unwrap();
+            }
+        }
+
+        let probe_input = vec![0.25, 0.75];
+        let before = nn.predict(probe_input.clone()).unwrap();
+
+        let json = serde_json::to_string(&nn).unwrap();
+        let restored: super::NeuralNetwork = serde_json::from_str(&json).unwrap();
+        let after = restored.predict(probe_input).unwrap();
+
+        assert_eq!(before, after);
     }
 }
