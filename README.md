@@ -23,6 +23,20 @@ This evolution of the concept can solve a variety of problems. A classic example
 
 <img src="assets/catch-the-apples.gif" alt="Animation showing a basket moving left and right to catch falling apples">
 
+## Demos
+
+### Decision Boundary Playground
+
+A small binary generates a self-contained HTML playground that trains the network on a few 2D classification tasks and visualizes the learned decision boundary.
+
+Run it with:
+
+```bash
+cargo run --bin decision_boundary_playground
+```
+
+Then open `target/decision-boundary-playground.html` in a browser.
+
 ## About This Project
 
 ![Made with Rust](https://img.shields.io/badge/Made%20with-Rust-orange)
