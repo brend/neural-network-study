@@ -37,6 +37,27 @@ cargo run --bin decision_boundary_playground
 
 Then open `target/decision-boundary-playground.html` in a browser.
 
+### Flappy Evolution Playground
+
+A binary trains a population of neural networks to play a Flappy Bird-like game with genetic evolution, then generates a standalone replay/report HTML file and saves the best model.
+
+Run it with:
+
+```bash
+cargo run --bin flappy_evolution_playground
+```
+
+Artifacts:
+
+- `target/flappy-evolution-playground.html` (interactive generation replay + metrics)
+- `target/flappy-champion.json` (best model checkpoint)
+
+To warm-start a run from an existing model:
+
+```bash
+cargo run --bin flappy_evolution_playground -- --load-model target/flappy-champion.json
+```
+
 ## About This Project
 
 ![Made with Rust](https://img.shields.io/badge/Made%20with-Rust-orange)

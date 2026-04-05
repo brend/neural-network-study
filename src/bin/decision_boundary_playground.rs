@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn train_and_render(dataset: DatasetSpec, seed: u64) -> Result<DatasetView, Box<dyn Error>> {
     let mut rng = StdRng::seed_from_u64(seed);
-    let mut network = NeuralNetwork::new(2, dataset.hidden_size, 1, Some(&mut rng))?;
+    let mut network = NeuralNetwork::new(vec![2, dataset.hidden_size, 1], Some(&mut rng))?;
     network.set_learning_rate(dataset.learning_rate);
 
     let mut shuffled = dataset.samples.clone();
@@ -576,7 +576,11 @@ fn make_ring_dataset() -> DatasetSpec {
         let dx = x - 0.5;
         let dy = y - 0.5;
         let radius = (dx * dx + dy * dy).sqrt();
-        let label = if radius > 0.2 && radius < 0.34 { 1.0 } else { 0.0 };
+        let label = if radius > 0.2 && radius < 0.34 {
+            1.0
+        } else {
+            0.0
+        };
         samples.push(Sample { x, y, label });
     }
 
